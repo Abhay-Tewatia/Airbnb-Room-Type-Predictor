@@ -1,183 +1,336 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Airbnb Room Type Predictor</title>
-  <link rel="stylesheet" href="style.css"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AirPredict – Room Type AI</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
 </head>
 <body>
 
-<header>
-  <div class="header-inner">
-    <div class="brand">
-      <div class="logo">🏠</div>
-      <div>
-        <h1>Airbnb Room Type Predictor</h1>
-        <p>Machine Learning Powered Classification</p>
+  <!-- Particle Canvas -->
+  <canvas id="particle-canvas"></canvas>
+
+  <!-- Ambient blobs -->
+  <div class="ambient-blob blob-1"></div>
+  <div class="ambient-blob blob-2"></div>
+  <div class="ambient-blob blob-3"></div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
       </div>
+      <span class="logo-text">Air<span class="accent">Predict</span></span>
     </div>
-    <div class="badge"><span class="dot"></span> Model Active</div>
-  </div>
-</header>
-
-<main>
-
-  <!-- FORM -->
-  <section class="card form-card">
-    <div class="card-header">
-      <h2>Listing Details</h2>
-      <p>Enter property information to classify the room type</p>
+    <div class="header-badge">
+      <span class="status-dot"></span>
+      <span>Model Live</span>
     </div>
+  </header>
 
-    <form id="form">
-
-      <div class="row-2">
-        <div class="field">
-          <label>Latitude</label>
-          <input type="number" id="latitude" placeholder="40.7128" step="any"/>
-          <span class="hint">-90 to 90</span>
-          <span class="err" id="e-latitude"></span>
-        </div>
-        <div class="field">
-          <label>Longitude</label>
-          <input type="number" id="longitude" placeholder="-74.0060" step="any"/>
-          <span class="hint">-180 to 180</span>
-          <span class="err" id="e-longitude"></span>
-        </div>
-      </div>
-
-      <div class="row-2">
-        <div class="field">
-          <label>Price per Night ($)</label>
-          <input type="number" id="price" placeholder="150" step="any"/>
-          <span class="hint">Greater than 0</span>
-          <span class="err" id="e-price"></span>
-        </div>
-        <div class="field">
-          <label>Minimum Nights</label>
-          <input type="number" id="minimum_nights" placeholder="3"/>
-          <span class="hint">1 to 365</span>
-          <span class="err" id="e-minimum_nights"></span>
-        </div>
-      </div>
-
-      <div class="row-2">
-        <div class="field">
-          <label>Number of Reviews</label>
-          <input type="number" id="number_of_reviews" placeholder="85"/>
-          <span class="hint">≥ 0</span>
-          <span class="err" id="e-number_of_reviews"></span>
-        </div>
-        <div class="field">
-          <label>Reviews Per Month</label>
-          <input type="number" id="reviews_per_month" placeholder="4.25" step="any"/>
-          <span class="hint">≥ 0</span>
-          <span class="err" id="e-reviews_per_month"></span>
-        </div>
-      </div>
-
-      <div class="row-2">
-        <div class="field">
-          <label>Host Listings Count</label>
-          <input type="number" id="calculated_host_listings_count" placeholder="2"/>
-          <span class="hint">≥ 0</span>
-          <span class="err" id="e-calculated_host_listings_count"></span>
-        </div>
-        <div class="field">
-          <label>Availability (days/year)</label>
-          <input type="number" id="availability_365" placeholder="180"/>
-          <span class="hint">0 to 365</span>
-          <span class="err" id="e-availability_365"></span>
-        </div>
-      </div>
-
-      <div class="field">
-        <label>Neighbourhood Group</label>
-        <select id="neighbourhood_group">
-          <option value="">Select borough…</option>
-          <option>Manhattan</option>
-          <option>Brooklyn</option>
-          <option>Queens</option>
-          <option>Bronx</option>
-          <option>Staten Island</option>
-        </select>
-        <span class="err" id="e-neighbourhood_group"></span>
-      </div>
-
-      <div class="field">
-        <label>Neighbourhood</label>
-        <input type="text" id="neighbourhood" placeholder="e.g. Chelsea, Williamsburg…"/>
-        <span class="err" id="e-neighbourhood"></span>
-      </div>
-
-      <div class="actions">
-        <button type="submit" id="predict-btn">
-          <span id="btn-text">🔍 Predict Room Type</span>
-        </button>
-        <button type="button" id="reset-btn">Reset</button>
-      </div>
-
-    </form>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-label">AI-Powered Classification</div>
+    <h1 class="hero-title">
+      Predict Your<br />
+      <span class="gradient-text">Listing Type</span>
+    </h1>
+    <p class="hero-sub">
+      Enter your NYC Airbnb listing details and let our machine learning model predict the room type with confidence scores.
+    </p>
+    <div class="hero-chips">
+      <span class="chip">🏠 Entire Home</span>
+      <span class="chip">🛏 Private Room</span>
+      <span class="chip">🤝 Shared Room</span>
+    </div>
   </section>
 
-  <!-- RESULT -->
-  <section class="card result-card" id="result-card">
+  <!-- Main Card -->
+  <main class="main-container">
+    <div class="card glass-card">
 
-    <div id="state-empty" class="state">
-      <div class="state-icon">🖥️</div>
-      <p class="state-title">No prediction yet</p>
-      <p class="state-sub">Fill the form and click <strong>Predict Room Type</strong></p>
-    </div>
+      <!-- Progress Bar -->
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" id="progressBar"></div>
+      </div>
 
-    <div id="state-loading" class="state hidden">
-      <div class="spinner"></div>
-      <p class="state-title">Analyzing…</p>
-      <p class="state-sub">Sending data to ML model</p>
-    </div>
-
-    <div id="state-error" class="state hidden">
-      <div class="state-icon">❌</div>
-      <p class="state-title err-title">Request Failed</p>
-      <p class="state-sub" id="err-msg"></p>
-    </div>
-
-    <div id="state-success" class="hidden">
-      <div class="result-top">
-        <span class="result-label">Predicted Room Type</span>
-        <div class="result-type" id="result-type"></div>
-        <div class="conf-row">
-          <span>Confidence</span>
-          <span class="conf-badge" id="conf-val"></span>
+      <!-- Steps Indicator -->
+      <div class="steps-row">
+        <div class="step active" data-step="1">
+          <div class="step-circle">1</div>
+          <span>Location</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" data-step="2">
+          <div class="step-circle">2</div>
+          <span>Pricing</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" data-step="3">
+          <div class="step-circle">3</div>
+          <span>Reviews</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" data-step="4">
+          <div class="step-circle">4</div>
+          <span>Availability</span>
         </div>
       </div>
-      <div class="result-body">
-        <p class="prob-heading">Probability Breakdown</p>
-        <div id="prob-bars"></div>
-      </div>
-      <div class="result-foot" id="result-time"></div>
+
+      <!-- Form Sections -->
+      <form id="predictForm" novalidate>
+
+        <!-- Step 1: Location -->
+        <section class="form-section active" id="step-1">
+          <div class="section-header">
+            <div class="section-icon">📍</div>
+            <div>
+              <h2>Location Details</h2>
+              <p>Tell us where your listing is located in New York City.</p>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="field-group full-width">
+              <label for="neighbourhood_group">Borough (Neighbourhood Group)</label>
+              <div class="select-wrapper">
+                <select id="neighbourhood_group" name="neighbourhood_group" required>
+                  <option value="">Select borough…</option>
+                  <option value="Manhattan">Manhattan</option>
+                  <option value="Brooklyn">Brooklyn</option>
+                  <option value="Queens">Queens</option>
+                  <option value="Bronx">Bronx</option>
+                  <option value="Staten Island">Staten Island</option>
+                </select>
+                <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              <span class="field-error" id="err-neighbourhood_group"></span>
+            </div>
+
+            <div class="field-group full-width">
+              <label for="neighbourhood">Neighbourhood Name</label>
+              <input type="text" id="neighbourhood" name="neighbourhood" placeholder="e.g. Williamsburg, Harlem, Astoria…" required />
+              <span class="field-hint">Specific neighbourhood within the borough</span>
+              <span class="field-error" id="err-neighbourhood"></span>
+            </div>
+
+            <div class="field-group">
+              <label for="latitude">Latitude</label>
+              <div class="input-with-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                <input type="number" id="latitude" name="latitude" step="any" min="-90" max="90" placeholder="40.7128" required />
+              </div>
+              <span class="field-hint">Between –90 and 90</span>
+              <span class="field-error" id="err-latitude"></span>
+            </div>
+
+            <div class="field-group">
+              <label for="longitude">Longitude</label>
+              <div class="input-with-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                <input type="number" id="longitude" name="longitude" step="any" min="-180" max="180" placeholder="-74.0060" required />
+              </div>
+              <span class="field-hint">Between –180 and 180</span>
+              <span class="field-error" id="err-longitude"></span>
+            </div>
+          </div>
+
+          <div class="nyc-map-hint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <span>NYC coordinates range: Lat 40.48–40.92 · Lon –74.26 to –73.68</span>
+          </div>
+
+          <div class="btn-row right">
+            <button type="button" class="btn btn-primary" onclick="nextStep(1)">
+              Next: Pricing
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+        </section>
+
+        <!-- Step 2: Pricing -->
+        <section class="form-section" id="step-2">
+          <div class="section-header">
+            <div class="section-icon">💰</div>
+            <div>
+              <h2>Pricing & Booking</h2>
+              <p>Set your pricing details and booking requirements.</p>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="field-group">
+              <label for="price">Price per Night (USD)</label>
+              <div class="input-with-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                <input type="number" id="price" name="price" min="1" step="0.01" placeholder="120.00" required />
+              </div>
+              <div class="price-slider-wrap">
+                <input type="range" id="priceSlider" min="1" max="1000" value="120" class="range-slider" />
+                <div class="range-labels"><span>$1</span><span>$1000+</span></div>
+              </div>
+              <span class="field-error" id="err-price"></span>
+            </div>
+
+            <div class="field-group">
+              <label for="minimum_nights">Minimum Nights</label>
+              <div class="input-with-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+                <input type="number" id="minimum_nights" name="minimum_nights" min="1" max="365" placeholder="1" required />
+              </div>
+              <span class="field-hint">Between 1 and 365 nights</span>
+              <span class="field-error" id="err-minimum_nights"></span>
+            </div>
+
+            <div class="field-group full-width">
+              <label for="calculated_host_listings_count">Host Listings Count</label>
+              <div class="input-with-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                <input type="number" id="calculated_host_listings_count" name="calculated_host_listings_count" min="0" placeholder="1" required />
+              </div>
+              <span class="field-hint">Total listings managed by this host</span>
+              <span class="field-error" id="err-calculated_host_listings_count"></span>
+            </div>
+          </div>
+
+          <div class="btn-row spread">
+            <button type="button" class="btn btn-ghost" onclick="prevStep(2)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+              Back
+            </button>
+            <button type="button" class="btn btn-primary" onclick="nextStep(2)">
+              Next: Reviews
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+        </section>
+
+        <!-- Step 3: Reviews -->
+        <section class="form-section" id="step-3">
+          <div class="section-header">
+            <div class="section-icon">⭐</div>
+            <div>
+              <h2>Review Metrics</h2>
+              <p>Enter the review statistics for this listing.</p>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="field-group">
+              <label for="number_of_reviews">Total Reviews</label>
+              <div class="input-with-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <input type="number" id="number_of_reviews" name="number_of_reviews" min="0" placeholder="48" required />
+              </div>
+              <span class="field-error" id="err-number_of_reviews"></span>
+            </div>
+
+            <div class="field-group">
+              <label for="reviews_per_month">Reviews per Month</label>
+              <div class="input-with-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <input type="number" id="reviews_per_month" name="reviews_per_month" min="0" step="0.01" placeholder="1.27" required />
+              </div>
+              <span class="field-hint">Average monthly review rate</span>
+              <span class="field-error" id="err-reviews_per_month"></span>
+            </div>
+          </div>
+
+          <div class="btn-row spread">
+            <button type="button" class="btn btn-ghost" onclick="prevStep(3)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+              Back
+            </button>
+            <button type="button" class="btn btn-primary" onclick="nextStep(3)">
+              Next: Availability
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+        </section>
+
+        <!-- Step 4: Availability -->
+        <section class="form-section" id="step-4">
+          <div class="section-header">
+            <div class="section-icon">📅</div>
+            <div>
+              <h2>Availability</h2>
+              <p>How many days per year is your listing available?</p>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field-group full-width">
+              <label for="availability_365">Days Available per Year</label>
+              <div class="availability-display">
+                <span id="availDisplay">180</span>
+                <span class="avail-unit">/ 365 days</span>
+              </div>
+              <input type="range" id="availability_365" name="availability_365" min="0" max="365" value="180" class="range-slider big" required />
+              <div class="range-labels"><span>0 days</span><span>365 days</span></div>
+              <div class="avail-buckets">
+                <div class="bucket" id="bucket-low">Low<br/><small>0–120</small></div>
+                <div class="bucket" id="bucket-mid">Medium<br/><small>121–250</small></div>
+                <div class="bucket" id="bucket-high">High<br/><small>251–365</small></div>
+              </div>
+              <span class="field-error" id="err-availability_365"></span>
+            </div>
+          </div>
+
+          <div class="btn-row spread">
+            <button type="button" class="btn btn-ghost" onclick="prevStep(4)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+              Back
+            </button>
+            <button type="submit" class="btn btn-predict" id="predictBtn">
+              <div class="btn-content">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Predict Room Type
+              </div>
+              <div class="btn-loader hidden">
+                <div class="spinner"></div>
+                <span>Analyzing…</span>
+              </div>
+            </button>
+          </div>
+        </section>
+
+      </form>
     </div>
 
-  </section>
+    <!-- Result Panel -->
+    <div class="result-panel" id="resultPanel">
+      <div class="result-header">
+        <div class="result-icon" id="resultIcon">🏠</div>
+        <div>
+          <div class="result-label">Predicted Room Type</div>
+          <div class="result-type" id="resultType">—</div>
+        </div>
+        <div class="confidence-badge" id="confidenceBadge">—</div>
+      </div>
 
-</main>
+      <div class="prob-section">
+        <div class="prob-title">Confidence Breakdown</div>
+        <div id="probBars"></div>
+      </div>
 
-<!-- HOW IT WORKS -->
-<section class="how">
-  <div class="how-inner">
-    <h2>How it works</h2>
-    <ol>
-      <li><strong>Enter listing details</strong><span>Fill in location, pricing, reviews and neighbourhood info.</span></li>
-      <li><strong>FastAPI validates input</strong><span>Pydantic schemas enforce field types and ranges.</span></li>
-      <li><strong>Pipeline preprocesses data</strong><span>Scikit-learn encodes categoricals and scales numerics.</span></li>
-      <li><strong>Classifier predicts</strong><span>Random Forest outputs the most likely room type.</span></li>
-      <li><strong>Probabilities displayed</strong><span>Confidence scores shown as animated visual bars.</span></li>
-    </ol>
-  </div>
-</section>
+      <div class="result-meta" id="resultMeta"></div>
 
-<footer>Built with <b>Python</b> · <b>Scikit-learn</b> · <b>FastAPI</b></footer>
+      <button class="btn btn-ghost reset-btn" onclick="resetForm()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+        New Prediction
+      </button>
+    </div>
 
-<script src="app.js"></script>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>Built with FastAPI + Scikit-learn · NYC Airbnb Dataset</p>
+  </footer>
+
+  <script src="app.js"></script>
 </body>
 </html>

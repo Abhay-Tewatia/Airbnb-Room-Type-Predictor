@@ -1,163 +1,338 @@
-const API_URL = "http://127.0.0.1:8000/predict";
+/* ═══════════════════════════════════════════════
+   AirPredict – app.js
+   ═══════════════════════════════════════════════ */
 
-const LABELS = ["Entire home/apt", "Private room", "Shared room"];
+const API_BASE = 'http://127.0.0.1:8000';
 
-const RULES = {
-  latitude:                       v => v !== "" && +v >= -90  && +v <= 90,
-  longitude:                      v => v !== "" && +v >= -180 && +v <= 180,
-  price:                          v => v !== "" && +v > 0,
-  minimum_nights:                 v => v !== "" && +v >= 1   && +v <= 365,
-  number_of_reviews:              v => v !== "" && +v >= 0,
-  reviews_per_month:              v => v !== "" && +v >= 0,
-  calculated_host_listings_count: v => v !== "" && +v >= 0,
-  availability_365:               v => v !== "" && +v >= 0   && +v <= 365,
-  neighbourhood_group:            v => v !== "",
-  neighbourhood:                  v => v.trim() !== "",
+/* ─── Room-type metadata ─────────────────────── */
+const ROOM_META = {
+  'Entire home/apt': {
+    icon: '🏠', color: '#6a8cf8',
+    desc: 'The listing is the entire property — guests have it all to themselves.'
+  },
+  'Private room': {
+    icon: '🛏', color: '#a78bfa',
+    desc: 'A private bedroom within a shared home. Host or other guests may share common areas.'
+  },
+  'Shared room': {
+    icon: '🤝', color: '#34d399',
+    desc: 'A shared sleeping space — budget-friendly and great for solo travellers.'
+  },
 };
 
-const MSGS = {
-  latitude:                       "Must be between -90 and 90",
-  longitude:                      "Must be between -180 and 180",
-  price:                          "Must be greater than 0",
-  minimum_nights:                 "Must be between 1 and 365",
-  number_of_reviews:              "Must be ≥ 0",
-  reviews_per_month:              "Must be ≥ 0",
-  calculated_host_listings_count: "Must be ≥ 0",
-  availability_365:               "Must be between 0 and 365",
-  neighbourhood_group:            "Please select a borough",
-  neighbourhood:                  "Cannot be empty",
-};
+/* ─── State ──────────────────────────────────── */
+let currentStep = 1;
+const TOTAL_STEPS = 4;
 
-function $(id) { return document.getElementById(id); }
+/* ─── Particle Canvas ────────────────────────── */
+(function initParticles() {
+  const canvas = document.getElementById('particle-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles;
 
-function showOnly(id) {
-  ["state-empty","state-loading","state-error","state-success"].forEach(s => {
-    $(s).classList.toggle("hidden", s !== id);
-  });
-}
-
-function setErr(field, msg) {
-  $("e-" + field).textContent = msg;
-  $(field) && $(field).classList.toggle("invalid", !!msg);
-}
-
-function clearAll() {
-  Object.keys(RULES).forEach(f => setErr(f, ""));
-}
-
-function validate() {
-  let ok = true;
-  clearAll();
-  for (const [f, rule] of Object.entries(RULES)) {
-    const el = $(f);
-    if (!el) continue;
-    const v = el.value;
-    if (!rule(v)) { setErr(f, MSGS[f]); ok = false; }
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
   }
+
+  function makeParticle() {
+    return {
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: Math.random() * 1.5 + 0.3,
+      vx: (Math.random() - 0.5) * 0.25,
+      vy: (Math.random() - 0.5) * 0.25,
+      alpha: Math.random() * 0.5 + 0.1,
+    };
+  }
+
+  function init() {
+    resize();
+    particles = Array.from({ length: 120 }, makeParticle);
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0) p.x = W;
+      if (p.x > W) p.x = 0;
+      if (p.y < 0) p.y = H;
+      if (p.y > H) p.y = 0;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(106,140,248,${p.alpha})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', resize);
+  init();
+  draw();
+})();
+
+/* ─── Step Navigation ────────────────────────── */
+function setStep(n) {
+  // Hide all sections
+  document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
+  document.getElementById(`step-${n}`).classList.add('active');
+
+  // Update step indicators
+  document.querySelectorAll('.step').forEach(el => {
+    const s = parseInt(el.dataset.step);
+    el.classList.remove('active', 'done');
+    if (s === n) el.classList.add('active');
+    if (s < n)  el.classList.add('done');
+  });
+
+  // Update progress bar
+  document.getElementById('progressBar').style.width = `${(n / TOTAL_STEPS) * 100}%`;
+  currentStep = n;
+}
+
+function validateStep(n) {
+  const fields = getStepFields(n);
+  let ok = true;
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    const errEl = document.getElementById(`err-${id}`);
+    const val = el.value.trim();
+    let msg = '';
+    if (!val) {
+      msg = 'This field is required.';
+    } else if (el.type === 'number') {
+      const num = parseFloat(val);
+      if (isNaN(num)) { msg = 'Must be a number.'; }
+      else if (el.min !== '' && num < parseFloat(el.min)) {
+        msg = `Must be ≥ ${el.min}.`;
+      } else if (el.max !== '' && num > parseFloat(el.max)) {
+        msg = `Must be ≤ ${el.max}.`;
+      }
+    }
+    if (msg) {
+      ok = false;
+      el.classList.add('error');
+      if (errEl) errEl.textContent = msg;
+    } else {
+      el.classList.remove('error');
+      if (errEl) errEl.textContent = '';
+    }
+  });
   return ok;
 }
 
-function payload() {
+function getStepFields(n) {
   return {
-    latitude:                       parseFloat($("latitude").value),
-    longitude:                      parseFloat($("longitude").value),
-    price:                          parseFloat($("price").value),
-    minimum_nights:                 parseInt($("minimum_nights").value),
-    number_of_reviews:              parseInt($("number_of_reviews").value),
-    reviews_per_month:              parseFloat($("reviews_per_month").value),
-    calculated_host_listings_count: parseInt($("calculated_host_listings_count").value),
-    availability_365:               parseInt($("availability_365").value),
-    neighbourhood_group:            $("neighbourhood_group").value,
-    neighbourhood:                  $("neighbourhood").value.trim(),
-  };
+    1: ['neighbourhood_group', 'neighbourhood', 'latitude', 'longitude'],
+    2: ['price', 'minimum_nights', 'calculated_host_listings_count'],
+    3: ['number_of_reviews', 'reviews_per_month'],
+    4: ['availability_365'],
+  }[n] || [];
 }
 
-function renderResult(data) {
-  const { predicted_room_type, probability } = data;
+function nextStep(current) {
+  if (!validateStep(current)) return;
+  setStep(current + 1);
+}
+function prevStep(current) { setStep(current - 1); }
 
-  const pairs = probability
-    .map((p, i) => ({ label: LABELS[i] || `Class ${i}`, p }))
-    .sort((a, b) => b.p - a.p);
+/* ─── Range Slider Sync ──────────────────────── */
+// Price slider ↔ input
+const priceInput  = document.getElementById('price');
+const priceSlider = document.getElementById('priceSlider');
 
-  $("result-type").textContent = predicted_room_type;
-  $("conf-val").textContent    = (pairs[0].p * 100).toFixed(1) + "%";
+priceSlider.addEventListener('input', () => {
+  priceInput.value = priceSlider.value;
+  updateSliderBg(priceSlider, 1, 1000);
+});
+priceInput.addEventListener('input', () => {
+  const v = Math.min(1000, Math.max(1, priceInput.value || 1));
+  priceSlider.value = v;
+  updateSliderBg(priceSlider, 1, 1000);
+});
 
-  const bars = $("prob-bars");
-  bars.innerHTML = "";
-  pairs.forEach(({ label, p }, i) => {
-    const pct = (p * 100).toFixed(1);
-    const row = document.createElement("div");
-    row.className = "prob-row";
-    row.innerHTML = `
-      <div class="prob-meta">
-        <span class="prob-name">${label}</span>
-        <span class="prob-pct">${pct}%</span>
-      </div>
-      <div class="prob-track">
-        <div class="prob-fill c${i}" style="width:0%"></div>
-      </div>`;
-    bars.appendChild(row);
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      row.querySelector(".prob-fill").style.width = pct + "%";
-    }));
+// Availability slider
+const availSlider  = document.getElementById('availability_365');
+const availDisplay = document.getElementById('availDisplay');
+
+availSlider.addEventListener('input', () => {
+  const v = parseInt(availSlider.value);
+  availDisplay.textContent = v;
+  updateSliderBg(availSlider, 0, 365);
+  updateBuckets(v);
+});
+
+function updateSliderBg(slider, min, max) {
+  const pct = ((slider.value - min) / (max - min)) * 100;
+  slider.style.setProperty('--pct', pct + '%');
+}
+
+function updateBuckets(v) {
+  document.getElementById('bucket-low').classList.toggle('active-low',  v >= 0   && v <= 120);
+  document.getElementById('bucket-mid').classList.toggle('active-mid',  v > 120  && v <= 250);
+  document.getElementById('bucket-high').classList.toggle('active-high', v > 250);
+}
+
+// Init slider visuals
+updateSliderBg(priceSlider, 1, 1000);
+updateSliderBg(availSlider, 0, 365);
+updateBuckets(180);
+
+/* ─── Clear errors on input ──────────────────── */
+document.querySelectorAll('input, select').forEach(el => {
+  el.addEventListener('input', () => {
+    el.classList.remove('error');
+    const err = document.getElementById(`err-${el.id}`);
+    if (err) err.textContent = '';
   });
+});
 
-  $("result-time").textContent = "Predicted at " + new Date().toLocaleTimeString();
-  showOnly("state-success");
-}
+/* ─── Form Submit ────────────────────────────── */
+document.getElementById('predictForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!validateStep(4)) return;
 
-async function predict() {
-  if (!validate()) return;
+  const btn = document.getElementById('predictBtn');
+  btn.classList.add('loading');
 
-  const btn = $("predict-btn");
-  btn.disabled = true;
-  $("btn-text").textContent = "⏳ Analyzing…";
-  showOnly("state-loading");
+  const payload = {
+    neighbourhood_group:              document.getElementById('neighbourhood_group').value,
+    neighbourhood:                    document.getElementById('neighbourhood').value,
+    latitude:                  parseFloat(document.getElementById('latitude').value),
+    longitude:                 parseFloat(document.getElementById('longitude').value),
+    price:                     parseFloat(document.getElementById('price').value),
+    minimum_nights:              parseInt(document.getElementById('minimum_nights').value),
+    number_of_reviews:           parseInt(document.getElementById('number_of_reviews').value),
+    reviews_per_month:         parseFloat(document.getElementById('reviews_per_month').value),
+    calculated_host_listings_count: parseInt(document.getElementById('calculated_host_listings_count').value),
+    availability_365:            parseInt(document.getElementById('availability_365').value),
+  };
 
   try {
-    const res = await fetch(API_URL, {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify(payload()),
+    const res = await fetch(`${API_BASE}/predict`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
-      let msg = `Server error ${res.status}`;
-      try {
-        const err = await res.json();
-        if (Array.isArray(err.detail)) msg = err.detail.map(e => e.msg).join("; ");
-        else if (err.detail) msg = String(err.detail);
-      } catch(_) {}
-      throw new Error(msg);
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || `Server error ${res.status}`);
     }
 
-    renderResult(await res.json());
-
+    const data = await res.json();
+    showResult(data, payload);
   } catch (err) {
-    let msg = err.message || "Unknown error";
-    if (err instanceof TypeError) {
-      msg = "Cannot reach FastAPI at " + API_URL + ". Make sure uvicorn is running.";
-    }
-    $("err-msg").textContent = msg;
-    showOnly("state-error");
+    showError(err.message);
   } finally {
-    btn.disabled = false;
-    $("btn-text").textContent = "🔍 Predict Room Type";
+    btn.classList.remove('loading');
   }
+});
+
+/* ─── Show Result ────────────────────────────── */
+function showResult(data, payload) {
+  const panel = document.getElementById('resultPanel');
+  const type  = data.predicted_room_type;
+  const probs = data.probability; // array [p0, p1, p2, ...]
+
+  // Determine class labels from model output order
+  // Common Airbnb room types
+  const labels = ['Entire home/apt', 'Private room', 'Shared room'];
+  const meta   = ROOM_META[type] || { icon: '🏘', color: '#6a8cf8', desc: '' };
+
+  // Header
+  document.getElementById('resultIcon').textContent = meta.icon;
+  document.getElementById('resultType').textContent = type;
+
+  // Find top confidence
+  const topIdx = probs.indexOf(Math.max(...probs));
+  const topPct = (Math.max(...probs) * 100).toFixed(1);
+  document.getElementById('confidenceBadge').textContent = `${topPct}%`;
+
+  // Probability bars
+  const barsContainer = document.getElementById('probBars');
+  barsContainer.innerHTML = '';
+  const barColors = ['#6a8cf8', '#a78bfa', '#34d399'];
+
+  probs.forEach((p, i) => {
+    const label = labels[i] || `Class ${i}`;
+    const pct   = (p * 100).toFixed(1);
+    const color = barColors[i % barColors.length];
+    const isTop = i === topIdx;
+    barsContainer.innerHTML += `
+      <div class="prob-row">
+        <div class="prob-row-header">
+          <span class="prob-row-name" style="color:${isTop ? color : ''};font-weight:${isTop ? 700 : 500}">
+            ${isTop ? '✦ ' : ''}${label}
+          </span>
+          <span class="prob-row-pct">${pct}%</span>
+        </div>
+        <div class="prob-bar-bg">
+          <div class="prob-bar-fill" id="bar-${i}" style="background:${isTop ? `linear-gradient(90deg,${color}cc,${color})` : color + '66'}"></div>
+        </div>
+      </div>
+    `;
+  });
+
+  // Animate bars after paint
+  requestAnimationFrame(() => {
+    probs.forEach((p, i) => {
+      const bar = document.getElementById(`bar-${i}`);
+      if (bar) setTimeout(() => { bar.style.width = `${(p * 100).toFixed(1)}%`; }, 80 * i);
+    });
+  });
+
+  // Meta summary
+  document.getElementById('resultMeta').innerHTML = `
+    <strong style="color:var(--text)">Insight:</strong> ${meta.desc}
+    &nbsp;·&nbsp; Listing in <em>${payload.neighbourhood}, ${payload.neighbourhood_group}</em>
+    at $${payload.price}/night with ${payload.availability_365} days availability.
+  `;
+
+  panel.classList.remove('visible');
+  panel.offsetHeight; // reflow
+  panel.classList.add('visible');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-$("form").addEventListener("submit", e => { e.preventDefault(); predict(); });
+/* ─── Show Error ─────────────────────────────── */
+function showError(msg) {
+  const panel = document.getElementById('resultPanel');
+  panel.innerHTML = `
+    <div style="text-align:center;padding:20px 0">
+      <div style="font-size:2.5rem;margin-bottom:16px">⚠️</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:1.2rem;font-weight:700;color:#f87171;margin-bottom:10px">Prediction Failed</div>
+      <div style="font-size:0.88rem;color:var(--text-muted);margin-bottom:24px;word-break:break-word">${msg}</div>
+      <p style="font-size:0.8rem;color:var(--text-dim)">Make sure the FastAPI server is running at <code style="color:var(--accent)">${API_BASE}</code></p>
+      <button class="btn btn-ghost reset-btn" onclick="resetForm()" style="margin-top:20px;width:100%;justify-content:center">
+        Try Again
+      </button>
+    </div>
+  `;
+  panel.classList.remove('visible');
+  panel.offsetHeight;
+  panel.classList.add('visible');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
-$("reset-btn").addEventListener("click", () => {
-  $("form").reset();
-  clearAll();
-  showOnly("state-empty");
-});
+/* ─── Reset ──────────────────────────────────── */
+function resetForm() {
+  document.getElementById('predictForm').reset();
+  document.getElementById('resultPanel').classList.remove('visible');
+  document.getElementById('resultPanel').innerHTML = '';
+  document.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
+  document.querySelectorAll('.field-error').forEach(el => el.textContent = '');
+  priceSlider.value = 120;
+  updateSliderBg(priceSlider, 1, 1000);
+  availDisplay.textContent = '180';
+  availSlider.value = 180;
+  updateSliderBg(availSlider, 0, 365);
+  updateBuckets(180);
+  setStep(1);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
-Object.keys(RULES).forEach(f => {
-  const el = $(f);
-  if (el) el.addEventListener("input",  () => setErr(f, ""));
-  if (el) el.addEventListener("change", () => setErr(f, ""));
-});
-
-showOnly("state-empty");
+/* ─── Initial step ───────────────────────────── */
+setStep(1);
