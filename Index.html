@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Airbnb Room Type Predictor</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <div class="logo">🏠</div>
+      <div>
+        <h1>Airbnb Room Type Predictor</h1>
+        <p>Machine Learning Powered Classification</p>
+      </div>
+    </div>
+    <div class="badge"><span class="dot"></span> Model Active</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- FORM -->
+  <section class="card form-card">
+    <div class="card-header">
+      <h2>Listing Details</h2>
+      <p>Enter property information to classify the room type</p>
+    </div>
+
+    <form id="form">
+
+      <div class="row-2">
+        <div class="field">
+          <label>Latitude</label>
+          <input type="number" id="latitude" placeholder="40.7128" step="any"/>
+          <span class="hint">-90 to 90</span>
+          <span class="err" id="e-latitude"></span>
+        </div>
+        <div class="field">
+          <label>Longitude</label>
+          <input type="number" id="longitude" placeholder="-74.0060" step="any"/>
+          <span class="hint">-180 to 180</span>
+          <span class="err" id="e-longitude"></span>
+        </div>
+      </div>
+
+      <div class="row-2">
+        <div class="field">
+          <label>Price per Night ($)</label>
+          <input type="number" id="price" placeholder="150" step="any"/>
+          <span class="hint">Greater than 0</span>
+          <span class="err" id="e-price"></span>
+        </div>
+        <div class="field">
+          <label>Minimum Nights</label>
+          <input type="number" id="minimum_nights" placeholder="3"/>
+          <span class="hint">1 to 365</span>
+          <span class="err" id="e-minimum_nights"></span>
+        </div>
+      </div>
+
+      <div class="row-2">
+        <div class="field">
+          <label>Number of Reviews</label>
+          <input type="number" id="number_of_reviews" placeholder="85"/>
+          <span class="hint">≥ 0</span>
+          <span class="err" id="e-number_of_reviews"></span>
+        </div>
+        <div class="field">
+          <label>Reviews Per Month</label>
+          <input type="number" id="reviews_per_month" placeholder="4.25" step="any"/>
+          <span class="hint">≥ 0</span>
+          <span class="err" id="e-reviews_per_month"></span>
+        </div>
+      </div>
+
+      <div class="row-2">
+        <div class="field">
+          <label>Host Listings Count</label>
+          <input type="number" id="calculated_host_listings_count" placeholder="2"/>
+          <span class="hint">≥ 0</span>
+          <span class="err" id="e-calculated_host_listings_count"></span>
+        </div>
+        <div class="field">
+          <label>Availability (days/year)</label>
+          <input type="number" id="availability_365" placeholder="180"/>
+          <span class="hint">0 to 365</span>
+          <span class="err" id="e-availability_365"></span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Neighbourhood Group</label>
+        <select id="neighbourhood_group">
+          <option value="">Select borough…</option>
+          <option>Manhattan</option>
+          <option>Brooklyn</option>
+          <option>Queens</option>
+          <option>Bronx</option>
+          <option>Staten Island</option>
+        </select>
+        <span class="err" id="e-neighbourhood_group"></span>
+      </div>
+
+      <div class="field">
+        <label>Neighbourhood</label>
+        <input type="text" id="neighbourhood" placeholder="e.g. Chelsea, Williamsburg…"/>
+        <span class="err" id="e-neighbourhood"></span>
+      </div>
+
+      <div class="actions">
+        <button type="submit" id="predict-btn">
+          <span id="btn-text">🔍 Predict Room Type</span>
+        </button>
+        <button type="button" id="reset-btn">Reset</button>
+      </div>
+
+    </form>
+  </section>
+
+  <!-- RESULT -->
+  <section class="card result-card" id="result-card">
+
+    <div id="state-empty" class="state">
+      <div class="state-icon">🖥️</div>
+      <p class="state-title">No prediction yet</p>
+      <p class="state-sub">Fill the form and click <strong>Predict Room Type</strong></p>
+    </div>
+
+    <div id="state-loading" class="state hidden">
+      <div class="spinner"></div>
+      <p class="state-title">Analyzing…</p>
+      <p class="state-sub">Sending data to ML model</p>
+    </div>
+
+    <div id="state-error" class="state hidden">
+      <div class="state-icon">❌</div>
+      <p class="state-title err-title">Request Failed</p>
+      <p class="state-sub" id="err-msg"></p>
+    </div>
+
+    <div id="state-success" class="hidden">
+      <div class="result-top">
+        <span class="result-label">Predicted Room Type</span>
+        <div class="result-type" id="result-type"></div>
+        <div class="conf-row">
+          <span>Confidence</span>
+          <span class="conf-badge" id="conf-val"></span>
+        </div>
+      </div>
+      <div class="result-body">
+        <p class="prob-heading">Probability Breakdown</p>
+        <div id="prob-bars"></div>
+      </div>
+      <div class="result-foot" id="result-time"></div>
+    </div>
+
+  </section>
+
+</main>
+
+<!-- HOW IT WORKS -->
+<section class="how">
+  <div class="how-inner">
+    <h2>How it works</h2>
+    <ol>
+      <li><strong>Enter listing details</strong><span>Fill in location, pricing, reviews and neighbourhood info.</span></li>
+      <li><strong>FastAPI validates input</strong><span>Pydantic schemas enforce field types and ranges.</span></li>
+      <li><strong>Pipeline preprocesses data</strong><span>Scikit-learn encodes categoricals and scales numerics.</span></li>
+      <li><strong>Classifier predicts</strong><span>Random Forest outputs the most likely room type.</span></li>
+      <li><strong>Probabilities displayed</strong><span>Confidence scores shown as animated visual bars.</span></li>
+    </ol>
+  </div>
+</section>
+
+<footer>Built with <b>Python</b> · <b>Scikit-learn</b> · <b>FastAPI</b></footer>
+
+<script src="app.js"></script>
+</body>
+</html>
