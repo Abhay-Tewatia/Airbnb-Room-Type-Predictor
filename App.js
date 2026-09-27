@@ -1,8 +1,6 @@
-/* ═══════════════════════════════════════════════
-   AirPredict – app.js
-   ═══════════════════════════════════════════════ */
-
-const API_BASE = 'http://127.0.0.1:8000';
+// AirPredict – app.js
+ 
+const API_BASE = "https://airbnb-room-type-predictor-1-mp7g.onrender.com";
 
 /* ─── Room-type metadata ─────────────────────── */
 const ROOM_META = {
